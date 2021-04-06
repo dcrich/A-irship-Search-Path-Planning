@@ -56,10 +56,11 @@ class Coord:
         gcDistanceToEnd = self.indeces_to_LatLon_to_GreatCircleDistance(self.Coordinates,endCoordinates)
         self.h = m.sqrt(gcDistanceToEnd**2 + elevationChange**2)
     
-    def g_cost_calc(self, prevCoord):
-        new_gCost = self.indeces_to_LatLon_to_GreatCircleDistance(prevCoord.Coordinates, self.Coordinates)
-        if self.CameFrom == self.parent.CameFrom:
-            new_gCost = 1.5 * new_gCost
+    def g_cost_calc(self, prevCoord,startNode):
+        # new_gCost = self.indeces_to_LatLon_to_GreatCircleDistance(prevCoord.Coordinates, self.Coordinates)
+        new_gCost = self.indeces_to_LatLon_to_GreatCircleDistance(startNode.Coordinates, self.Coordinates)
+        # if self.CameFrom == self.parent.CameFrom:
+        #     new_gCost = 1.5 * new_gCost
         self.g = prevCoord.g + new_gCost
     
     def indeces_to_latlon(self):
@@ -230,7 +231,7 @@ def search(searchArea, start, end, cruiseAltitude, flightCeiling):
                 continue
             
             # Create the f, g, and h values
-            child.g_cost_calc(currentCoord)
+            child.g_cost_calc(currentCoord,startNode)
             
             # Heuristic costs calculated here, this is using great circle distance and change in altitude distance
             elevationAtCoord = searchArea[child.position[0]][child.position[1]]
