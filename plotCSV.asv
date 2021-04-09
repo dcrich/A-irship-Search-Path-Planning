@@ -10,7 +10,7 @@ figure(1)
 path = load('path.csv');
 
 % geoscatter(path(:,1),path(:,2), 'yo','filled')
-geoplot(path(:,1),path(:,2), 'k','LineWidth', 1)
+geoplot(path(:,1),path(:,2), 'm','LineWidth', 3)
 hold on
 geobasemap colorterrain
 % legend('Coordinates','Obstacles','Simulated Annealing', 'Pattern Search', 'A* search')
@@ -19,22 +19,21 @@ geobasemap colorterrain
 % hold off
 
 color = [.9 .1 .1];
-
-numfiles = 4860;
-for i = 0:2:numfiles
+% figure(2)
+numfiles = 20000;
+for i = 0:100:numfiles
     pathfile = sprintf('data/path%d.csv', i);
     path2 = load(pathfile);
     geoplot(path2(:,1),path2(:,2),'m','LineWidth', 2)
     geobasemap colorterrain
 %     hold on
-    pause(0.01)
+%     pause(0.01)
 %     color = color + [0,0.8/numfiles,0.8/numfiles];
 end
 geoplot(path(:,1),path(:,2), 'g','LineWidth', 3)
 hold off
 
-% %%
-% plot_flight_ceiling(2000)
+
 
 function plot_flight_ceiling(alt)
 if ~exist('elevationData','var')
