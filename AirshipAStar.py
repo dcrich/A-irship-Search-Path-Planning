@@ -36,6 +36,7 @@ import numpy as np
 import math as m
 import matplotlib.pyplot as plt 
 import os
+import time
 
 FLIGHT_CUSHION = 300
 
@@ -43,8 +44,7 @@ class Coord:
     def __init__(self, parent=None, position=None):
         self.parent = parent
         self.position = position # position in graph
-        self.indeces_to_latlon() # real world position, for calculating greatt circle disttance in heuristic
-        self.find_came_from()
+        self.indeces_to_latlon() # real world position, for calculating great circle distance in heuristic
         self.g = 0 # distance from start coord to current coord
         self.h = 0
         self.f = 0
@@ -52,19 +52,23 @@ class Coord:
     def __eq__(self,other):
         return self.position == other.position
     
-    def calc_heuristic(self, elevationChange, endCoordinates):
-        gcDistanceToEnd = self.indeces_to_LatLon_to_GreatCircleDistance(self.Coordinates,endCoordinates)
-        self.h = m.sqrt(gcDistanceToEnd**2 + elevationChange**2)
+    # def calc_heuristic(self, elevationChange, endCoordinates):
+    #     gcDistanceToEnd = self.indeces_to_LatLon_to_GreatCircleDistance(self.Coordinates,endCoordinates)
+    #     self.h = m.sqrt(gcDistanceToEnd**2 + elevationChange**2)
     
-    def g_cost_calc(self, prevCoord,startNode):
+    # def g_cost_calc(self, prevCoord,startNode):
+    #     # Cost to travel is distance of the path so far plus this next step
+    #     new_gCost = DISTANCE_WEIGHT * self.indeces_to_LatLon_to_GreatCircleDistance(prevCoord.Coordinates, self.Coordinates)
+    #     self.g = prevCoord.g + new_gCost
+
+    def calc_heuristic(self, endCoordinates):
+        gcDistanceToEnd = self.indeces_to_LatLon_to_GreatCircleDistance(self.Coordinates,endCoordinates)
+        self.h = gcDistanceToEnd
+    
+    def g_cost_calc(self, prevCoord,startNode, elevationChange):
         # Cost to travel is distance of the path so far plus this next step
-        new_gCost = DISTANCE_WEIGHT * self.indeces_to_LatLon_to_GreatCircleDistance(prevCoord.Coordinates, self.Coordinates)
-        # if self.CameFrom == self.parent.CameFrom:
-        #     new_gCost = 1.5 * new_gCost
-        self.g = prevCoord.g + new_gCost
-        # # Cost tto travel is disttance from start to new node
-        # new_gCost = self.indeces_to_LatLon_to_GreatCircleDistance(startNode.Coordinates, self.Coordinates)
-        # self.g = new_gCost
+        new_gCost = self.indeces_to_LatLon_to_GreatCircleDistance(prevCoord.Coordinates, self.Coordinates)
+        self.g = prevCoord.g + DISTANCE_WEIGHT * m.sqrt(new_gCost**2 + elevationChange**2)
     
     def indeces_to_latlon(self):
         """ 
@@ -82,25 +86,12 @@ class Coord:
         lon1 = (m.pi / 180) *  coord1[1]
         lat2 = (m.pi / 180) *  coord2[0]
         lon2 = (m.pi / 180) *  coord2[1]
-        earth_m = 6371
-        gcDistance = earth_m * 2 * m.asin(m.sqrt((m.sin((lat1 - lat2) / 2))**2 + m.cos(lat1) * m.cos(lat2) * (m.sin((lon1 - lon2) / 2))**2))
+        earth_km = 6371 
+        gcDistance = earth_km * 2 * m.asin(m.sqrt((m.sin((lat1 - lat2) / 2))**2 + m.cos(lat1) * m.cos(lat2) * (m.sin((lon1 - lon2) / 2))**2))
         return gcDistance
-    def find_came_from(self):
-        if self.parent is None:
-            self.CameFrom = 1
-        else:
-            diffArray = np.array(self.position) - np.array(self.parent.position)
-            if np.array_equal(diffArray, np.array([0, 1])):
-                self.CameFrom = 1
-            elif np.array_equal(diffArray, np.array([0,-1])):
-                self.CameFrom = 2  #Going west, Came from the east
-            elif np.array_equal(diffArray, np.array([1, 0])):
-                self.CameFrom = 3 #Going north, Came from the south
-            elif np.array_equal(diffArray, np.array([-1,0])):
-                self.CameFrom = 4       
+     
 
         
-
 def path_function(currentNode,maze):
     """Returns found path from start to end"""
     current = currentNode
@@ -155,7 +146,7 @@ def search(searchArea, start, end, cruiseAltitude, flightCeiling,testInd):
     # execution after some reasonable number of steps
     """ May need to change to fit data and problem"""
     outerIterations = 0
-    maxIterations = 20000 #(len(searchArea) // 2) ** 10
+    maxIterations = 10000 #(len(searchArea) // 2) ** 10
 
     # Which coords do we search next, search movement is left-right-top-bottom 
     # moveDirections  =  [[-1, 0 ], # go SOUTH
@@ -238,14 +229,16 @@ def search(searchArea, start, end, cruiseAltitude, flightCeiling,testInd):
                 continue
             
             # Create the f, g, and h values
-            child.g_cost_calc(currentCoord,startNode)
             # Heuristic costs calculated here, this is using great circle distance and change in altitude distance
             elevationAtCoord = searchArea[child.position[0]][child.position[1]]
             if elevationAtCoord >= currentCruiseAltitude: #climb needed
-                elevationChange = FLIGHT_CUSHION + (elevationAtCoord - currentCruiseAltitude) # may need to change currentCruiseAltitude to the altitude of the parent Coord
+                elevationChange = (FLIGHT_CUSHION + (elevationAtCoord - currentCruiseAltitude)) / 1000 #km
             else: # no climb needed, maintain elevation
                 elevationChange = 0 
-            child.calc_heuristic(elevationChange,endNode.Coordinates)
+            # child.calc_heuristic(elevationChange,endNode.Coordinates)
+            # child.g_cost_calc(currentCoord,startNode)
+            child.calc_heuristic(endNode.Coordinates)
+            child.g_cost_calc(currentCoord,startNode,elevationChange)
             child.f = child.g + child.h
 
             # Child is already in the yet_to_visit list and g cost is already lower
@@ -255,7 +248,7 @@ def search(searchArea, start, end, cruiseAltitude, flightCeiling,testInd):
 
             # Add the child to the yet_to_visit list
             visitList.append(child)
-        if counterLOOPS % 2 == 0:
+        if counterLOOPS % (10*DISTANCE_WEIGHT) == 0:
             currentPath = path_function(currentCoord, searchArea)
             currentPath = np.array(currentPath)
             np.savetxt('data%d/path%d.csv'%(testInd,counterLOOPS),currentPath)
@@ -270,39 +263,19 @@ def latlon_to_indeces(coord):
     coordIndeces = [ 84 - coord[0], 180 + coord[1]]
     return coordIndeces
 
+
 # import map, store map
 searchArea = np.loadtxt('elevation3D.txt')
 
 # initialize start, end, cruise altitude, flight ceiling
-startLatLon = [-14, -77] # starting position
-endLatLon = [1,-51] # ending position
-# startLatLon = [54, -59]
-# endLatLon = [71,23]
-
 # #SPAIN to BLACK SEA
 # startLatLon = [41, -9]
 # endLatLon = [45,34]
 
-# # SOUTH AFRICA TO SOUTH AMERICA
-# startLatLon = [-35, 21]
-# endLatLon = [-56,-70]
-
-# # AUSTRALIA TO SOUTH AMERICA
-# startLatLon = [-38, 145]
-# endLatLon = [-56,-70]
-
-#SPAIN to India
-startLatLon = [41, -9]
-endLatLon = [11,78]
-
-#AK to Panama
-startLatLon = [65, -151]
-endLatLon = [9,-80]
-
-
-cruiseAltitude = 1000 
-flightCeiling = 2000 - FLIGHT_CUSHION # make 300 m less than desired, since airship climbs 300m above whatever the elevation is if greater than cruise altitude
-
+# cruiseAltitude = 9000 - FLIGHT_CUSHION 
+# flightCeiling = 9000 - FLIGHT_CUSHION # make 300 m less than desired, since airship climbs 300m above whatever the elevation is if greater than cruise altitude
+cruiseAltitude = 1000
+flightCeiling = 2000 - FLIGHT_CUSHION
 DISTANCE_WEIGHT = 0.1
 # path = search(searchArea, latlon_to_indeces(startLatLon), latlon_to_indeces(endLatLon), cruiseAltitude, flightCeiling)
 # path = np.array(path)
@@ -312,8 +285,9 @@ DISTANCE_WEIGHT = 0.1
 # os.system(f'say -v {"Victoria"} {"I am done computing."}')
 
 
-
-for i in range(4):
+times = [0,0,0,0,0,0,0,0,0,0]
+for i in range(10):
+    #maze
     if i == 0:#SPAIN to India 1
         DISTANCE_WEIGHT = 1
         startLatLon = [41, -9]
@@ -322,16 +296,51 @@ for i in range(4):
         DISTANCE_WEIGHT = 0.1
         startLatLon = [41, -9]
         endLatLon = [11,78] 
-    elif i == 2:
+    #go around
+    elif i == 2: #AK to Panama 1
         DISTANCE_WEIGHT = 1
         startLatLon = [65, -151]
         endLatLon = [9,-80]
-    elif i == 3:
+    elif i == 3: #AK to Panama 0.1
         DISTANCE_WEIGHT = 0.1
         startLatLon = [65, -151]
         endLatLon = [9,-80]
+    #easy
+    elif i == 4:#SOUTH AFRICA TO SOUTH AMERICA 1
+        DISTANCE_WEIGHT = 1
+        startLatLon = [-35, 21]
+        endLatLon = [-56,-70]
+    elif i == 5: # SOUTH AFRICA TO SOUTH AMERICA 0.1
+        DISTANCE_WEIGHT = 0.1
+        startLatLon = [-35, 21]
+        endLatLon = [-56,-70]
+    #blockage
+    elif i == 6: # Peru Coast to Peru Inland
+        DISTANCE_WEIGHT = 1
+        startLatLon = [-5,-83]
+        endLatLon = [-5,-76]
+    elif i == 7: # Peru Coast to Peru Inland
+        DISTANCE_WEIGHT = 0.1
+        startLatLon = [-5,-83]
+        endLatLon = [-5,-76] 
+    #northern
+    elif i == 8: # Boston to Oslo
+        DISTANCE_WEIGHT = 1
+        startLatLon = [42,-71]
+        endLatLon = [59,11]
+    elif i == 9: # Boston to Oslo 
+        DISTANCE_WEIGHT = 0.1
+        startLatLon = [42,-71]
+        endLatLon = [59,11]
 
+    if not os.path.exists('data%d'%i):
+            os.makedirs('data%d'%i)
+    t = time.time()
     path = search(searchArea, latlon_to_indeces(startLatLon), latlon_to_indeces(endLatLon), cruiseAltitude, flightCeiling,i)
+    elapsed = time.time() - t
+    times[i] = elapsed
+    print(elapsed)
     path = np.array(path)
-    np.savetxt('path%d.csv'%i,path)
+    np.savetxt('data%d/fullpath.csv'%i,path)
 
+# np.savetxt('data/timesAltUpd.csv',np.array(times))

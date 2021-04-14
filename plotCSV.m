@@ -1,37 +1,103 @@
 
-figure(1)
+% figure(1)
 % plot_flight_ceiling(2000)
 
-% geoscatter([startPoint(2),X1(end/2+1:end),endPoint(2)],[startPoint(1),X1(1:end/2),endPoint(1)],'m','filled')
-% geoscatter([startPoint(2),X2(end/2+1:end),endPoint(2)],[startPoint(1),X2(1:end/2),endPoint(1)],'b','filled')
-% geoplot([startPoint(2),X1(end/2+1:end),endPoint(2)],[startPoint(1),X1(1:end/2),endPoint(1)],'m','LineWidth',3)
-% geoplot([startPoint(2),X2(end/2+1:end),endPoint(2)],[startPoint(1),X2(1:end/2),endPoint(1)],'b','LineWidth',3)
 
-path = load('path.csv');
-
-% geoscatter(path(:,1),path(:,2), 'yo','filled')
-geoplot(path(:,1),path(:,2), 'k','LineWidth', 1)
-hold on
-geobasemap colorterrain
-% legend('Coordinates','Obstacles','Simulated Annealing', 'Pattern Search', 'A* search')
-% ax = gca;
-% ax.FontSize = 16;
-% hold off
+% path = load('path.csv');
+%
+% % geoscatter(path(:,1),path(:,2), 'yo','filled')
+% geoplot(path(:,1),path(:,2), 'k','LineWidth', 1)
+% hold on
+% geobasemap colorterrain
+% % legend('Coordinates','Obstacles','Simulated Annealing', 'Pattern Search', 'A* search')
+% % ax = gca;
+% % ax.FontSize = 16;
+% % hold off
 
 color = [.9 .1 .1];
-
-numfiles = 4860;
-for i = 0:2:numfiles
-    pathfile = sprintf('data/path%d.csv', i);
+h = figure(2);
+numfiles = 4900;
+filename = 'SItestAnimated2.gif';
+for i = 0:10:numfiles
+    pathfile = sprintf('data/AltUpd/data0/path%d.csv', i);
     path2 = load(pathfile);
     geoplot(path2(:,1),path2(:,2),'m','LineWidth', 2)
+    hold on
+    geolimits([0 60],[-20 80])
     geobasemap colorterrain
-%     hold on
-    pause(0.01)
-%     color = color + [0,0.8/numfiles,0.8/numfiles];
+    drawnow
+    if mod(i,100) == 0
+    frame = getframe(h);
+    im = frame2im(frame);
+    [imind,cm] = rgb2ind(im,256);
+    % Write to the GIF File
+    if i == 0
+        imwrite(imind,cm,filename,'gif', 'Loopcount',inf);
+    else
+        imwrite(imind,cm,filename,'gif','WriteMode','append');
+    end
+    %     hold on
+    %     pause(0.01)
+    %     color = color + [0,0.8/numfiles,0.8/numfiles];
+    end
+    if i == numfiles
+        pathfile = sprintf('data/AltUpd/data0/fullpath.csv');
+        path2 = load(pathfile);
+        geoplot(path2(:,1),path2(:,2),'g','LineWidth', 2)
+        geolimits([0 60],[-20 80])
+        geobasemap colorterrain
+        drawnow
+        
+        frame = getframe(h);
+        im = frame2im(frame);
+        [imind,cm] = rgb2ind(im,256);
+        % Write to the GIF File
+        if i == 0
+            imwrite(imind,cm,filename,'gif', 'Loopcount',inf);
+        else
+            imwrite(imind,cm,filename,'gif','WriteMode','append');
+        end
+        pathfile = sprintf('data/AltUpd/data0/fullpath.csv');
+        path2 = load(pathfile);
+        geoplot(path2(:,1),path2(:,2),'g','LineWidth', 2)
+        geolimits([0 60],[-20 80])
+        geobasemap colorterrain
+        drawnow
+        
+        frame = getframe(h);
+        im = frame2im(frame);
+        [imind,cm] = rgb2ind(im,256);
+        % Write to the GIF File
+        if i == 0
+            imwrite(imind,cm,filename,'gif', 'Loopcount',inf);
+        else
+            imwrite(imind,cm,filename,'gif','WriteMode','append');
+        end
+        pathfile = sprintf('data/AltUpd/data0/fullpath.csv');
+        path2 = load(pathfile);
+        geoplot(path2(:,1),path2(:,2),'g','LineWidth', 2)
+        geolimits([0 60],[-20 80])
+        geobasemap colorterrain
+        drawnow
+        
+        frame = getframe(h);
+        im = frame2im(frame);
+        [imind,cm] = rgb2ind(im,256);
+        % Write to the GIF File
+        if i == 0
+            imwrite(imind,cm,filename,'gif', 'Loopcount',inf);
+        else
+            imwrite(imind,cm,filename,'gif','WriteMode','append');
+        end
+    end
 end
-geoplot(path(:,1),path(:,2), 'g','LineWidth', 3)
-hold off
+% pathfile = sprintf('data/AltUpd/data7/fullpath.csv');
+% path2 = load(pathfile);
+% geoplot(path2(:,1),path2(:,2),'g','LineWidth', 2)
+% geolimits([0 60],[-20 80])
+
+
+
 
 % %%
 % plot_flight_ceiling(2000)
@@ -45,7 +111,8 @@ west = elevationData.WEST;
 el = elevationData.MAX_ELEV;
 LatLonEl = [north,west,el];
 uniquedata = unique(LatLonEl,'rows');
-LatLonElTable = table(uniquedata(:,1),uniquedata(:,2),uniquedata(:,3), 'VariableNames',{'LAT','LON','ElevationMeters'});
+LatLonElTable = table(uniquedata(:,1),uniquedata(:,2),uniquedata(:,3),...
+    'VariableNames',{'LAT','LON','ElevationMeters'});
 
 
 % -56 to 84
@@ -64,7 +131,8 @@ for i = 84:-1:-56
 end
 for i = 1:360
     for j = 1:141
-        indexForElevation = find(LatLonElTable.LON == matrixlatLonEl(1,i,2) & LatLonElTable.LAT == matrixlatLonEl(j,1,1));
+        indexForElevation = find(LatLonElTable.LON == matrixlatLonEl(1,i,2) ...
+            & LatLonElTable.LAT == matrixlatLonEl(j,1,1));
         if ~isempty(indexForElevation)
             matrixlatLonEl(j,i,3) = max(LatLonElTable.ElevationMeters(indexForElevation));
         end
